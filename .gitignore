@@ -1,0 +1,42 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+bin/
+dist/
+
+# Test binary
+*.test
+
+# Output
+*.out
+coverage.*
+
+# Build artifacts
+tmp/
+
+# Go workspace file
+go.work
+
+# Dependency
+vendor/
+
+# IDE
+.idea/
+.vscode/*.json
+!.vscode/settings.json
+
+# Environment
+.env
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Swagger generated docs (re-generate with `make swag`)
+docs/swagger.json
+docs/swagger.yaml
+docs/docs.go
