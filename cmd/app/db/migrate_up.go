@@ -7,7 +7,6 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
-	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
 	"github.com/sule/go-boilerplate/config"
 )
@@ -20,14 +19,24 @@ var migrateUpCmd = &cobra.Command{
 }
 
 func runMigrateUp(cmd *cobra.Command, args []string) error {
-	_ = godotenv.Load()
 	cfg := config.Load()
+	fmt.Printf("Running migrate-up using source %q on %s\n", migrationDir, databaseTarget(cfg.Database.URL))
 
-	m, err := migrate.New("file://db/migrations", cfg.Database.URL)
+	m, err := migrate.New("file://"+migrationDir, cfg.Database.URL)
 	if err != nil {
 		return fmt.Errorf("failed to create migrator: %w", err)
 	}
 	defer m.Close()
+
+	beforeVersion, _, err := currentVersion(m)
+	if err != nil {
+		return fmt.Errorf("read migration version: %w", err)
+	}
+
+	files, err := loadMigrationFiles()
+	if err != nil {
+		return err
+	}
 
 	if len(args) == 1 {
 		n, err := strconv.Atoi(args[0])
@@ -43,6 +52,12 @@ func runMigrateUp(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	fmt.Println("Migrations applied successfully.")
+	afterVersion, _, err := currentVersion(m)
+	if err != nil {
+		return fmt.Errorf("read migration version after up: %w", err)
+	}
+
+	executed := versionsBetween(files, beforeVersion, afterVersion, "up")
+	printMigrationSummary("up", beforeVersion, afterVersion, executed)
 	return nil
 }

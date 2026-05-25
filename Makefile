@@ -1,4 +1,6 @@
-.PHONY: build build-alpine run dev swag test lint migrate-up migrate-down tools help
+.PHONY: build build-alpine run dev swag test lint migrate-up migrate-down migrate-create migrate-force tools help
+
+export PATH := $(shell go env GOPATH)/bin:$(PATH)
 
 APP_NAME = boilerplate
 BINARY   = bin/$(APP_NAME)
@@ -18,7 +20,7 @@ run: ## Run the server
 	go run main.go serve
 
 dev: ## Run with air live-reload
-	air
+	air -- serve
 
 swag: ## Generate Swagger docs
 	swag init -g main.go -o docs
@@ -34,6 +36,14 @@ migrate-up: ## Apply all pending migrations
 
 migrate-down: ## Roll back the last migration
 	go run main.go db migrate-down
+
+migrate-create: ## Create migration files (usage: make migrate-create NAME=add_users_table)
+	@test -n "$(NAME)" || (echo "NAME is required. Example: make migrate-create NAME=add_users_table" && exit 1)
+	go run main.go db migrate-create $(NAME)
+
+migrate-force: ## Force migration version (usage: make migrate-force VERSION=1)
+	@test -n "$(VERSION)" || (echo "VERSION is required. Example: make migrate-force VERSION=1" && exit 1)
+	go run main.go db migrate-force $(VERSION)
 
 tools: ## Install development tools
 	go install github.com/air-verse/air@latest

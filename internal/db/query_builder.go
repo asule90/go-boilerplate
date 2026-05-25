@@ -50,9 +50,15 @@ func (qb *QueryBuilder) BaseQueryAll(table string, columns ...string) sq.SelectB
 	return qb.sq.Select(columns...).From(table)
 }
 
-// BaseUpdate returns an UPDATE builder with updated_at = NOW().
-func (qb *QueryBuilder) BaseUpdate(table string) sq.UpdateBuilder {
+// BaseUpdateWithTimestamp returns an UPDATE builder with updated_at = NOW().
+func (qb *QueryBuilder) BaseUpdateWithTimestamp(table string) sq.UpdateBuilder {
 	return qb.sq.Update(table).Set("updated_at", sq.Expr("NOW()"))
+}
+
+// BaseUpdate returns an UPDATE builder without setting updated_at.
+// Use for tables that don't have an updated_at column.
+func (qb *QueryBuilder) BaseUpdate(table string) sq.UpdateBuilder {
+	return qb.sq.Update(table)
 }
 
 // BaseInsert returns an INSERT builder for the given table.

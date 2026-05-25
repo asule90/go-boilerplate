@@ -152,10 +152,36 @@ make dev            # Run with live reload (air)
 make swag           # Generate Swagger docs
 make test           # Run tests
 make lint           # Run golangci-lint
-make migrate-up     # Apply all pending migrations
-make migrate-down   # Roll back last migration
-make tools          # Install dev tools (air, swag, golangci-lint)
+make migrate-up                     # Apply all pending migrations
+make migrate-down                   # Roll back last migration
+make migrate-create NAME=add_users  # Create up/down migration files
+make migrate-force VERSION=1        # Force migration version without running SQL
+make tools                          # Install dev tools (air, swag, golangci-lint)
 ```
+
+## Migration Command Examples
+
+```bash
+# Apply next 2 migrations
+go run main.go db migrate-up 2
+
+# Roll back 1 migration (default)
+go run main.go db migrate-down
+
+# Roll back 3 migrations
+go run main.go db migrate-down 3
+
+# Create migration files in db/migrations
+make migrate-create NAME=add_profiles_table
+
+# Force migration version (no SQL executed)
+make migrate-force VERSION=5
+```
+
+All migration commands now print:
+- Migration source path and target database
+- Version transition (from -> to)
+- Exact migration files executed (when SQL is run)
 
 ## API Documentation
 

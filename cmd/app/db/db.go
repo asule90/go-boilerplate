@@ -11,4 +11,6 @@ var DBCmd = &cobra.Command{
 func init() {
 	DBCmd.AddCommand(migrateUpCmd)
 	DBCmd.AddCommand(migrateDownCmd)
+	DBCmd.AddCommand(migrateCreateCmd)
+	DBCmd.AddCommand(migrateForceCmd)
 }

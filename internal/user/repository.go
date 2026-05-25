@@ -129,7 +129,7 @@ func (r *repository) List(ctx context.Context, req ListUsersRequest) ([]User, in
 }
 
 func (r *repository) Update(ctx context.Context, u User) (User, error) {
-	query := r.qb.BaseUpdate(tableName).
+	query := r.qb.BaseUpdateWithTimestamp(tableName).
 		Set("display_name", u.DisplayName).
 		Set("bio", u.Bio).
 		Set("city", u.City).
@@ -151,7 +151,7 @@ func (r *repository) Update(ctx context.Context, u User) (User, error) {
 }
 
 func (r *repository) Delete(ctx context.Context, id string) error {
-	query := r.qb.BaseUpdate(tableName).
+	query := r.qb.BaseUpdateWithTimestamp(tableName).
 		Set("deleted_at", sq.Expr("NOW()")).
 		Where(sq.Eq{"id": id})
 
