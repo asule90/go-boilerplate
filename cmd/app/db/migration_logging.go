@@ -8,8 +8,10 @@ import (
 	"regexp"
 	"sort"
 	"strconv"
+	"time"
 
 	"github.com/golang-migrate/migrate/v4"
+	"go.uber.org/zap"
 )
 
 var migrationFilenamePattern = regexp.MustCompile(`^(\d+)_.+\.(up|down)\.sql$`)
@@ -99,6 +101,24 @@ func versionsBetween(files map[uint]migrationFiles, from, to uint, direction str
 	return executed
 }
 
+// MigrateLogger adapts zap.Logger to implement migrate.Logger interface.
+type MigrateLogger struct {
+	zap     *zap.Logger
+	verbose bool
+}
+
+func NewMigrateLogger(zap *zap.Logger, verbose bool) *MigrateLogger {
+	return &MigrateLogger{zap: zap, verbose: verbose}
+}
+
+func (ml *MigrateLogger) Printf(format string, v ...interface{}) {
+	ml.zap.Sugar().Infof(format, v...)
+}
+
+func (ml *MigrateLogger) Verbose() bool {
+	return ml.verbose
+}
+
 func printMigrationSummary(action string, beforeVersion, afterVersion uint, executed []string) {
 	fmt.Printf("Migration action: %s (from version %d to %d)\n", action, beforeVersion, afterVersion)
 	if len(executed) == 0 {
@@ -110,4 +130,22 @@ func printMigrationSummary(action string, beforeVersion, afterVersion uint, exec
 	for _, file := range executed {
 		fmt.Printf(" - %s\n", file)
 	}
+}
+
+// newMigrate creates a new Migrate instance with logger and lock timeout configured.
+func newMigrate(sourceURL, databaseURL string, logger *zap.Logger) (*migrate.Migrate, error) {
+	m, err := migrate.New(sourceURL, databaseURL)
+	if err != nil {
+		return nil, err
+	}
+
+	// Set logger for migration events
+	if logger != nil {
+		m.Log = NewMigrateLogger(logger, false)
+	}
+
+	// Set lock timeout to handle concurrent migration attempts
+	m.LockTimeout = 30 * time.Second
+
+	return m, nil
 }

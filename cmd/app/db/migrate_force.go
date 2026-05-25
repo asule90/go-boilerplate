@@ -2,13 +2,15 @@ package dbcmd
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 
-	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/spf13/cobra"
 	"github.com/sule/go-boilerplate/config"
+	"github.com/sule/go-boilerplate/pkg/logger"
+	"go.uber.org/zap"
 )
 
 var migrateForceCmd = &cobra.Command{
@@ -27,11 +29,26 @@ func runMigrateForce(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("invalid VERSION: %w", err)
 	}
 
-	m, err := migrate.New("file://"+migrationDir, cfg.Database.URL)
+	var zlog *zap.Logger
+	if l, err := logger.InitLogger(cfg); err == nil {
+		zlog = l
+	}
+
+	m, err := newMigrate("file://"+migrationDir, cfg.Database.URL, zlog)
 	if err != nil {
 		return fmt.Errorf("failed to create migrator: %w", err)
 	}
-	defer m.Close()
+
+	// Properly handle Close() errors
+	defer func() {
+		sourceErr, dbErr := m.Close()
+		if sourceErr != nil {
+			fmt.Fprintf(os.Stderr, "warning: failed to close migration source: %v\n", sourceErr)
+		}
+		if dbErr != nil {
+			fmt.Fprintf(os.Stderr, "warning: failed to close database connection: %v\n", dbErr)
+		}
+	}()
 
 	beforeVersion, beforeDirty, err := currentVersion(m)
 	if err != nil {
@@ -47,7 +64,12 @@ func runMigrateForce(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("read migration version after force: %w", err)
 	}
 
-	fmt.Printf("Migration action: force (from version %d dirty=%t to version %d dirty=%t)\n", beforeVersion, beforeDirty, afterVersion, afterDirty)
-	fmt.Println("No migration files executed. Force only updates schema history state.")
+	fmt.Printf("Migration state updated: version %d (dirty=%t) → %d (dirty=%t)\n", beforeVersion, beforeDirty, afterVersion, afterDirty)
+
+	if beforeDirty && !afterDirty {
+		fmt.Printf("✓ Recovered from dirty state\n")
+	}
+
+	fmt.Println("Note: Force only updates schema history state without executing migration files.")
 	return nil
 }
